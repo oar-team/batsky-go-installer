@@ -1,14 +1,16 @@
 package main
 
 import (
-	"bufio"
+	"bytes"
 	"fmt"
 	"go/ast"
+	"go/format"
 	"go/parser"
 	"go/token"
-	"io"
 	"io/ioutil"
 	"os"
+
+	"golang.org/x/tools/go/ast/astutil"
 )
 
 func main() {
@@ -19,43 +21,83 @@ func main() {
 		os.Exit(1)
 	}
 
-	for _, arg := range os.Args[1:] {
+	for _, path := range os.Args[1:] {
 		// For when we run the program with go run
-		if arg == "--" {
+		if path == "--" {
 			continue
 		}
 		fset := token.NewFileSet()
-		f, err := parser.ParseFile(fset, arg, nil, 0)
+		f, err := parser.ParseFile(fset, path, nil, parser.ParseComments)
 		if err != nil {
 			panic(err)
 		}
 
-		var nbImports int
-		var timeAlias string
 		timeIsImported := false
-		var importIndex int
-		ast.Inspect(f, func(n ast.Node) bool {
-			switch n.(type) {
-			case *ast.ImportSpec:
-				nbImports++
-				if n.(*ast.ImportSpec).Path.Value == "\"time\"" {
+		timeAlias := "time"
+		imports := astutil.Imports(fset, f)
+		for _, specs := range imports {
+			for _, spec := range specs {
+				if spec.Path.Value == "\"time\"" {
 					timeIsImported = true
-					importIndex = fset.Position(n.(*ast.ImportSpec).Path.ValuePos).Line
-					if n.(*ast.ImportSpec).Name != nil {
-						timeAlias = n.(*ast.ImportSpec).Name.Name
+					if spec.Name != nil {
+						timeAlias = spec.Name.Name
+					}
+				}
+			}
+		}
+
+		fmt.Println(timeAlias)
+
+		if !timeIsImported {
+			// Do not even bother
+			return
+		}
+
+		importIsNeeded := false
+		batskyAlias := "batskyTime"
+		newAST := astutil.Apply(f, nil, func(c *astutil.Cursor) bool {
+			switch c.Node().(type) {
+			case *ast.Ident:
+				if c.Node().(*ast.Ident).Name == timeAlias {
+					p := c.Parent()
+					switch p.(type) {
+					case *ast.SelectorExpr:
+						if isIn(p.(*ast.SelectorExpr).Sel.Name, callsToReplace) {
+							replacementNode := c.Node()
+							replacementNode.(*ast.Ident).Name = batskyAlias
+							c.Replace(replacementNode)
+							importIsNeeded = true
+						}
 					}
 				}
 			}
 			return true
 		})
 
-		if timeIsImported {
-			if nbImports > 1 {
-				insertStringToFile(arg, "batsky-time \"github.com/oar-team/batsky-go/time\"", importIndex)
-			} else if nbImports == 1 {
-				//TODO
+		if importIsNeeded {
+			astutil.AddNamedImport(fset, f, batskyAlias, "github.com/oar-team/batsky-go/time")
+		}
+		if !astutil.UsesImport(newAST.(*ast.File), "time") {
+			switch timeAlias {
+			case "time":
+				if !astutil.DeleteImport(fset, newAST.(*ast.File), "time") {
+					panic("Could not remove unused time import")
+				}
+			default:
+				if !astutil.DeleteNamedImport(fset, newAST.(*ast.File), timeAlias, "time") {
+					panic("Could not remove unused time import")
+				}
 			}
 		}
+
+		ast.Print(fset, newAST)
+
+		buf := &bytes.Buffer{}
+		err = format.Node(buf, fset, newAST)
+		if err != nil {
+			panic(err)
+		}
+		ioutil.WriteFile(path, buf.Bytes(), 0644)
 	}
 }
 
@@ -66,48 +108,4 @@ func isIn(s string, slice []string) bool {
 		}
 	}
 	return false
-}
-
-func file2lines(filePath string) ([]string, error) {
-	f, err := os.Open(filePath)
-	if err != nil {
-		return nil, err
-	}
-	defer f.Close()
-	return linesFromReader(f)
-}
-
-func linesFromReader(r io.Reader) ([]string, error) {
-	var lines []string
-	scanner := bufio.NewScanner(r)
-	for scanner.Scan() {
-		lines = append(lines, scanner.Text())
-	}
-	if err := scanner.Err(); err != nil {
-		return nil, err
-	}
-
-	return lines, nil
-}
-
-/**
- * Insert sting to n-th line of file.
- * If you want to insert a line, append newline '\n' to the end of the string.
- */
-func insertStringToFile(path, str string, index int) error {
-	lines, err := file2lines(path)
-	if err != nil {
-		return err
-	}
-
-	fileContent := ""
-	for i, line := range lines {
-		if i == index {
-			fileContent += str
-		}
-		fileContent += line
-		fileContent += "\n"
-	}
-
-	return ioutil.WriteFile(path, []byte(fileContent), 0644)
 }
