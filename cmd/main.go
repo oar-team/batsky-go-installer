@@ -10,6 +10,7 @@ import (
 	"go/token"
 	"io/ioutil"
 	"os"
+	"path/filepath"
 
 	"golang.org/x/tools/go/ast/astutil"
 )
@@ -21,37 +22,63 @@ var batskyAlias string = "batskyTime"
 var batskyPath string = "github.com/oar-team/batsky-go/time"
 
 func main() {
-
 	if len(os.Args) < 2 {
 		fmt.Fprintf(os.Stderr, "usage:\n\t%s [files]\n", os.Args[0])
 		os.Exit(1)
 	}
+	fmt.Println("This action will replace all calls to time's", callsToReplace, "in", os.Args[1:])
 
-	var err error
-	for _, path := range os.Args[1:] {
-		// For when we run the program with go run
-		if path == "--" {
-			continue
-		}
-		err = searchAndReplace(path)
-		if err != nil {
-			panic(err)
+	warning := true
+	for warning {
+		fmt.Println("This action is irreversible. Do you wish to continue? [y/N/showFiles]")
+
+		text := ""
+		fmt.Scanln(&text)
+		switch text {
+		case "N", "":
+			return
+		case "y":
+			warning = false
+		case "showFiles":
+			walkDirs(os.Args[1:], true)
 		}
 	}
+	walkDirs(os.Args[1:], false)
 }
 
 /*
-Looks for time imports, and calls to functions :
-- Now
-- Sleep
-- NewTimer
-- After
-- AfterFunc
-- NewTicker
-- Tick
-In order to change those calls to call github.com/oar-team/batsky-go/time functions instead.
+Looks for specific calls to "time"'s functions (see the list in the function
+warning message in order to change those calls to call
+github.com/oar-team/batsky-go/time functions instead.
+
 Leaves the rest of time objects and functions as is.
+
+dryRun : only shows the files it has an effect on without actually doing anything
 */
+func walkDirs(dirs []string, dryRun bool) error {
+	var err error
+	for _, path := range os.Args[1:] {
+		err = filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
+			if err != nil {
+				fmt.Println(err)
+				return nil
+			}
+			if !info.IsDir() && filepath.Ext(path) == ".go" {
+				if dryRun {
+					fmt.Println(path)
+				} else {
+					searchAndReplace(path)
+				}
+			}
+			return nil
+		})
+		if err != nil {
+			return err
+		}
+	}
+	return nil
+}
+
 func searchAndReplace(path string) error {
 	fset := token.NewFileSet()
 	f, err := parser.ParseFile(fset, path, nil, parser.ParseComments)
@@ -112,8 +139,6 @@ func searchAndReplace(path string) error {
 			}
 		}
 	}
-
-	ast.Print(fset, newAST)
 
 	buf := &bytes.Buffer{}
 	err = format.Node(buf, fset, newAST)
