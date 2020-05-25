@@ -8,7 +8,11 @@ The simulation are backed up by Batsim. Batkube is a software doing the link
 between Batsim and Kubernetes schedulers.
 
 ## Usage
-**TODO**
+- Build this repo. `go build cmd/main.go`
+- `./main ./relative/path/to/dir1 ./relative/path/to/dir2 ...`
+
+To show the files it will replace beforehand, type in "showFiles" to get a
+dryRun that will just print the path to the files.
 
 ## Why is this needed?
 The Kubernetes ecosystem revolves around its central API server asynchronously,
@@ -21,6 +25,3 @@ machine time. This is done by hijacking calls to the Go time library, to
 re-route time requests to Batkube.  This program modifies the source code and
 vendored dependencies code in order to change specific calls to
 github.com/oar-team/batsky-go rather than the standard time library.
-
-**TODO** : lists these calls
-

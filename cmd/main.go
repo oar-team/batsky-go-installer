@@ -26,7 +26,7 @@ func main() {
 		fmt.Fprintf(os.Stderr, "usage:\n\t%s [files]\n", os.Args[0])
 		os.Exit(1)
 	}
-	fmt.Println("This action will replace all calls to time's", callsToReplace, "in", os.Args[1:])
+	fmt.Println("This action will replace all calls to \"time\"'s", callsToReplace, "in", os.Args[1:])
 
 	warning := true
 	for warning {
