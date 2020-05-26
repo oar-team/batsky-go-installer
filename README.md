@@ -1,4 +1,4 @@
-# Batsky time hijack
+# batsky-go installer
 
 This repo is a tool aiming at changing imports of a Kubernetes scheduler, so as
 to enable compatilibity with the Batkube interface to be able to run
@@ -8,11 +8,22 @@ The simulation are backed up by Batsim. Batkube is a software doing the link
 between Batsim and Kubernetes schedulers.
 
 ## Usage
-- Build this repo. `go build cmd/main.go`
-- `./main ./relative/path/to/dir1 ./relative/path/to/dir2 ...`
+- `go build cmd/main.go`. I will refer to the built binary as `./main`.
+- `cd` into target project.
+- `./main /scheduler/source/files/`
+- `go mod tidy`
+- `go mod vendor`
+- `./main ./vendor/dependency1 ./vendor/dependency2 ...`
 
-To show the files it will replace beforehand, type in "showFiles" to get a
-dryRun that will just print the path to the files.
+Notes :
+- To show the files it will replace beforehand, type in "showFiles" to get a
+    dryRun that will just print the path to the files.
+- If github.com/oar-team has not appeared in the vendor folder, you need to
+    manually copy over batsky-go source files and its dependencies. (to
+    simplify the process, cd into batsky-go project, `go mod vendor`, copy over
+    vendor content)
+- Do not replace the entire vendor folder. It is not needed, and will create
+    circular dependencies.
 
 ## Why is this needed?
 The Kubernetes ecosystem revolves around its central API server asynchronously,

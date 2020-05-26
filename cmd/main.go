@@ -15,7 +15,7 @@ import (
 	"golang.org/x/tools/go/ast/astutil"
 )
 
-var callsToReplace []string = []string{"Now", "Sleep", "NewTimer", "After", "AfterFunc", "NewTicker", "Tick"}
+var callsToReplace []string = []string{"Now", "Sleep", "NewTimer", "After", "AfterFunc", "NewTicker", "Tick", "Timer", "Ticker"}
 var timeAlias string = "time"
 var timePath string = "time"
 var batskyAlias string = "batskyTime"
