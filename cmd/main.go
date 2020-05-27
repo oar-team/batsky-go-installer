@@ -11,6 +11,7 @@ import (
 	"io/ioutil"
 	"os"
 	"path/filepath"
+	"strings"
 
 	"golang.org/x/tools/go/ast/astutil"
 )
@@ -23,12 +24,31 @@ var batskyPath string = "github.com/oar-team/batsky-go/time"
 
 func main() {
 	if len(os.Args) < 2 {
-		fmt.Fprintf(os.Stderr, "usage:\n\t%s [files]\n", os.Args[0])
+		fmt.Fprintf(os.Stderr, "usage:\n\t%s [path1 path2...] [--not [path3 path4...]]\n", os.Args[0])
 		os.Exit(1)
 	}
-	fmt.Println("This action will replace all calls to \"time\"'s", callsToReplace, "in", os.Args[1:])
 
+	var paths []string
+	var ignorePaths []string
+	not := false
+	for _, str := range os.Args[1:] {
+		switch str {
+		case "--":
+			// this happens when this code is run with go run
+		case "--not":
+			not = true
+		default:
+			if not {
+				ignorePaths = append(ignorePaths, str)
+			} else {
+				paths = append(paths, str)
+			}
+		}
+	}
+
+	fmt.Println("This action will replace all calls to \"time\"'s", callsToReplace, "in the given directories / files")
 	warning := true
+	dryRun := false
 	for warning {
 		fmt.Println("This action is irreversible. Do you wish to continue? [y/N/showFiles]")
 
@@ -40,10 +60,11 @@ func main() {
 		case "y":
 			warning = false
 		case "showFiles":
-			walkDirs(os.Args[1:], true)
+			dryRun = true
+			warning = false
 		}
 	}
-	walkDirs(os.Args[1:], false)
+	walkDirs(paths, ignorePaths, dryRun)
 }
 
 /*
@@ -55,15 +76,15 @@ Leaves the rest of time objects and functions as is.
 
 dryRun : only shows the files it has an effect on without actually doing anything
 */
-func walkDirs(dirs []string, dryRun bool) error {
+func walkDirs(paths, ignorePaths []string, dryRun bool) error {
 	var err error
-	for _, path := range os.Args[1:] {
+	for _, path := range paths {
 		err = filepath.Walk(path, func(path string, info os.FileInfo, err error) error {
 			if err != nil {
 				fmt.Println(err)
 				return nil
 			}
-			if !info.IsDir() && filepath.Ext(path) == ".go" {
+			if !info.IsDir() && !isPathIn(path, ignorePaths) && filepath.Ext(path) == ".go" {
 				if dryRun {
 					fmt.Println(path)
 				} else {
@@ -148,9 +169,25 @@ func searchAndReplace(path string) error {
 	return ioutil.WriteFile(path, buf.Bytes(), 0644)
 }
 
+/*
+Returns whether s is in the slice
+*/
 func isIn(s string, slice []string) bool {
 	for _, e := range slice {
 		if e == s {
+			return true
+		}
+	}
+	return false
+}
+
+/*
+Returns whether the specified path is a child of any of the paths listed in the
+input slice
+*/
+func isPathIn(path string, paths []string) bool {
+	for _, e := range paths {
+		if strings.Contains(path, e) {
 			return true
 		}
 	}

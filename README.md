@@ -15,15 +15,19 @@ between Batsim and Kubernetes schedulers.
 - `go mod vendor`
 - `./main ./vendor/dependency1 ./vendor/dependency2 ...`
 
-Notes :
+Options :
+- --not : ignores all the directories or files after this keyword
 - To show the files it will replace beforehand, type in "showFiles" to get a
     dryRun that will just print the path to the files.
+
+Notes :
 - If github.com/oar-team has not appeared in the vendor folder, you need to
     manually copy over batsky-go source files and its dependencies. (to
     simplify the process, cd into batsky-go project, `go mod vendor`, copy over
     vendor content)
 - Do not replace the entire vendor folder. It is not needed, and will create
-    circular dependencies.
+    circular dependencies. In particular, do not replace github.com/pebbe/zmq4
+    and github.com/google/uuid
 
 ## Why is this needed?
 The Kubernetes ecosystem revolves around its central API server asynchronously,
