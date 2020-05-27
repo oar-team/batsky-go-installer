@@ -48,7 +48,6 @@ func main() {
 
 	fmt.Println("This action will replace all calls to \"time\"'s", callsToReplace, "in the given directories / files")
 	warning := true
-	dryRun := false
 	for warning {
 		fmt.Println("This action is irreversible. Do you wish to continue? [y/N/showFiles]")
 
@@ -60,10 +59,10 @@ func main() {
 		case "y":
 			warning = false
 		case "showFiles":
-			dryRun = true
+			walkDirs(paths, ignorePaths, true)
 		}
 	}
-	walkDirs(paths, ignorePaths, dryRun)
+	walkDirs(paths, ignorePaths, false)
 }
 
 /*
