@@ -61,7 +61,6 @@ func main() {
 			warning = false
 		case "showFiles":
 			dryRun = true
-			warning = false
 		}
 	}
 	walkDirs(paths, ignorePaths, dryRun)
