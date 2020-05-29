@@ -17,7 +17,7 @@ between Batsim and Kubernetes schedulers.
 
 Options :
 - --not : ignores all the directories or files after this keyword
-- To show the files it will replace beforehand, type in "showFiles" to get a
+- To show the files it will replace beforehand, type in "show-files" to get a
     dryRun that will just print the path to the files.
 
 Notes :

@@ -46,10 +46,10 @@ func main() {
 		}
 	}
 
-	fmt.Println("This action will replace all calls to \"time\"'s", callsToReplace, "in the given directories / files")
+	fmt.Println("This action will replace all calls to \"time\"'s", callsToReplace, "in the given directories and files")
 	warning := true
 	for warning {
-		fmt.Println("This action is irreversible. Do you wish to continue? [y/N/showFiles]")
+		fmt.Println("This action is irreversible. Do you wish to continue? [y/N/show-files]")
 
 		text := ""
 		fmt.Scanln(&text)
@@ -58,9 +58,12 @@ func main() {
 			return
 		case "y":
 			warning = false
-		case "showFiles":
+		case "show-files":
+			fmt.Println("These files will be modified :")
+			fmt.Println()
 			walkDirs(paths, ignorePaths, true)
 		}
+		fmt.Println()
 	}
 	walkDirs(paths, ignorePaths, false)
 }
